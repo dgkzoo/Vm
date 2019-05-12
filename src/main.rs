@@ -16,10 +16,11 @@ fn main() {
         return;
     }
 
-    // vmファイル
+    // ターゲットファイルの取得
     let args: Vec<String> = env::args().collect();
     let filepath = &args[1];
 
+    // vmファイルからasmファイルを生成
     let mut vmt = VmTransrator::new();
     vmt.translate(filepath.to_string());
 }
