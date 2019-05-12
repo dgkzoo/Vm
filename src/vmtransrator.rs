@@ -11,17 +11,16 @@ use std::path::Path;
 use parser;
 use parser::Parser;
 
-pub struct VmTransrator {
-}
+pub struct VmTransrator {}
 
 impl VmTransrator {
     pub fn new() -> VmTransrator {
         VmTransrator {}
     }
-    
+
     ///
     /// アセンブリへの変換
-    /// 
+    ///
     pub fn translate(&mut self, filepath: String) {
         println!("filepath = {}", filepath);
 
@@ -40,7 +39,6 @@ impl VmTransrator {
 
         let reader = BufReader::new(infile);
         for line in reader.lines() {
-
             // コメント、空白行などを除去
             let parser = Parser::new(line.unwrap());
             let line = parser.get_valid_line();
@@ -57,8 +55,8 @@ impl VmTransrator {
 
     ///
     /// VMコマンドをasmに変換する
-    /// 
-    pub fn vm2asm(&mut self, line: String) -> String{
+    ///
+    pub fn vm2asm(&mut self, line: String) -> String {
         let mut out_asm = "".to_string();
 
         let mut parser = Parser::new(line);
@@ -70,7 +68,7 @@ impl VmTransrator {
 
         // スタック系（push, pop）
         if cmd_type == parser::CMD_PUSH || cmd_type == parser::CMD_POP {
-            out_asm = self.vm2asm_push_pop(cmd_type.to_string(), arg1, arg2);
+            out_asm = self.vm2asm_push_pop(cmd.to_string(), arg1, arg2);
         }
 
         // 計算系（addとか）
@@ -83,12 +81,11 @@ impl VmTransrator {
 
     ///
     /// pushコマンドをasmへ変換
-    /// 
-    pub fn vm2asm_push_pop(&mut self, command:String, segment:String, index:String) -> String {
-        let mut out_asm = "".to_string();
-
+    ///
+    pub fn vm2asm_push_pop(&mut self, command: String, segment: String, index: String) -> String {
         // constant値をpush
         if segment == "constant" {
+            let mut out_asm = "".to_string();
             out_asm = out_asm + format!("@{}    // ***push constant {} ***\n", index, index).as_str();
             out_asm = out_asm + format!("D=A    // D=A(constant {})\n", index).as_str();
             out_asm = out_asm + format!("@SP    // Areg=0x00\n").as_str();
@@ -96,35 +93,56 @@ impl VmTransrator {
             out_asm = out_asm + format!("M=D    // push ({}) // M[SP]=D(constant {})\n", index, index).as_str();
             out_asm = out_asm + format!("@SP    // Areg=0x00\n").as_str();
             out_asm = out_asm + format!("M=M+1  // SP inc // M[SP]=M[SP]+1\n").as_str();
+            return out_asm;
         }
 
-        return out_asm;
+        // local値をpush
+        if segment == "local" {
+            if command == "push" {
+                let mut out_asm = "".to_string();
+                out_asm = out_asm + format!("@{}    // ***push local {} ***\n", index, index).as_str();
+                out_asm = out_asm + format!("D=A    // D={}\n", index).as_str();
+                out_asm = out_asm + format!("@LCL   // Areg=300\n").as_str();
+                out_asm = out_asm + format!("D=D+M  // D=local address(LCL+index)\n").as_str();
+                out_asm = out_asm + format!("A=D    // A=local address(LCL+index)\n").as_str();
+                out_asm = out_asm + format!("D=M    // D=local val\n").as_str();
+
+                out_asm = out_asm + format!("@SP    // Areg=0\n").as_str();
+                out_asm = out_asm + format!("A=M    // A=M[SP]\n").as_str();
+                out_asm = out_asm + format!("M=D    // push\n").as_str();
+
+                out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
+                out_asm = out_asm + format!("M=M+1  // SP inc // M[SP]=M[SP]+1\n").as_str();
+                return out_asm;
+            }
+        }
+
+        return "".to_string();
     }
 
     ///
     /// pushコマンドをasmへ変換
-    /// 
-    pub fn vm2asm_arithmethic(&self, command:String) -> String {
-        let mut out_asm = "".to_string();
-
+    ///
+    pub fn vm2asm_arithmethic(&self, command: String) -> String {
         // add
         if command == "add" {
+            let mut out_asm = "".to_string();
             out_asm = out_asm + format!("@SP   // ***add***\n").as_str();
-			out_asm = out_asm + format!("M=M-1 // SP - 1\n").as_str();
-			out_asm = out_asm + format!("A=M   // A=M[SP](SP Address)\n").as_str();
-			out_asm = out_asm + format!("D=M   // D=M(val2 to D)\n").as_str();
+            out_asm = out_asm + format!("M=M-1 // SP - 1\n").as_str();
+            out_asm = out_asm + format!("A=M   // A=M[SP](SP Address)\n").as_str();
+            out_asm = out_asm + format!("D=M   // D=M(val2 to D)\n").as_str();
 
-			out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
-			out_asm = out_asm + format!("M=M-1 // SP-1\n").as_str();
-			out_asm = out_asm + format!("A=M   // A=M[SP](SP Address)\n").as_str();
-			out_asm = out_asm + format!("M=D+M // add\n").as_str();
+            out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
+            out_asm = out_asm + format!("M=M-1 // SP-1\n").as_str();
+            out_asm = out_asm + format!("A=M   // A=M[SP](SP Address)\n").as_str();
+            out_asm = out_asm + format!("M=D+M // add\n").as_str();
 
-			out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
-			out_asm = out_asm + format!("M=M+1 // SP + 1\n").as_str();
+            out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
+            out_asm = out_asm + format!("M=M+1 // SP + 1\n").as_str();
 
-			return out_asm;
+            return out_asm;
         }
 
-        return out_asm;
+        return "".to_string();
     }
 }
