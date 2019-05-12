@@ -6,4 +6,4 @@ cargo new Vm --bin
 ## 1. run
 ```
 cd project-root
-cargo run xxx.asm
+cargo run xxx.vm
