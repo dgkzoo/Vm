@@ -7,6 +7,7 @@
 
 pub const CMD_PUSH: &str = "PUSH";
 pub const CMD_POP: &str = "POP";
+pub const CMD_ARITH: &str = "ARITH";
 
 
 ///
@@ -76,7 +77,11 @@ impl Parser {
             return CMD_POP;
         }
 
-        return "X";
+        return CMD_ARITH;
+    }
+
+    pub fn get_cmd(&self) -> &str{
+        return &self.cmd;
     }
 
     pub fn get_arg1(&self) -> &str{

@@ -55,18 +55,27 @@ impl VmTransrator {
         }
     }
 
+    ///
+    /// VMコマンドをasmに変換する
+    /// 
     pub fn vm2asm(&mut self, line: String) -> String{
         let mut out_asm = "".to_string();
 
         let mut parser = Parser::new(line);
         parser.exec();
         let cmd_type = parser.get_command_type();
+        let cmd = String::from(parser.get_cmd());
         let arg1 = String::from(parser.get_arg1());
         let arg2 = String::from(parser.get_arg2());
 
-        // push, pop
+        // スタック系（push, pop）
         if cmd_type == parser::CMD_PUSH || cmd_type == parser::CMD_POP {
             out_asm = self.vm2asm_push_pop(cmd_type.to_string(), arg1, arg2);
+        }
+
+        // 計算系（addとか）
+        if cmd_type == parser::CMD_ARITH {
+            out_asm = self.vm2asm_arithmethic(cmd.to_string());
         }
 
         return out_asm;
@@ -87,6 +96,33 @@ impl VmTransrator {
             out_asm = out_asm + format!("M=D    // push ({}) // M[SP]=D(constant {})\n", index, index).as_str();
             out_asm = out_asm + format!("@SP    // Areg=0x00\n").as_str();
             out_asm = out_asm + format!("M=M+1  // SP inc // M[SP]=M[SP]+1\n").as_str();
+        }
+
+        return out_asm;
+    }
+
+    ///
+    /// pushコマンドをasmへ変換
+    /// 
+    pub fn vm2asm_arithmethic(&self, command:String) -> String {
+        let mut out_asm = "".to_string();
+
+        // add
+        if command == "add" {
+            out_asm = out_asm + format!("@SP   // ***add***\n").as_str();
+			out_asm = out_asm + format!("M=M-1 // SP - 1\n").as_str();
+			out_asm = out_asm + format!("A=M   // A=M[SP](SP Address)\n").as_str();
+			out_asm = out_asm + format!("D=M   // D=M(val2 to D)\n").as_str();
+
+			out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
+			out_asm = out_asm + format!("M=M-1 // SP-1\n").as_str();
+			out_asm = out_asm + format!("A=M   // A=M[SP](SP Address)\n").as_str();
+			out_asm = out_asm + format!("M=D+M // add\n").as_str();
+
+			out_asm = out_asm + format!("@SP   // Areg=0\n").as_str();
+			out_asm = out_asm + format!("M=M+1 // SP + 1\n").as_str();
+
+			return out_asm;
         }
 
         return out_asm;
